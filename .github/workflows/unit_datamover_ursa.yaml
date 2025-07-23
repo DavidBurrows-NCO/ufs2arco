@@ -52,6 +52,8 @@ jobs:
           python -c "from importlib.metadata import version; print('xarray ', version('xarray'))"
           python -c "from importlib.metadata import version; print('zarr', version('zarr'))"
           python -c "from importlib.metadata import version; print('ufs2arco', version('ufs2arco'))"
+      - name: Install mpi4py
+        run: pip install mpi4py
       - name: Run Unit Tests
         shell: bash -l {0}
         run: |
