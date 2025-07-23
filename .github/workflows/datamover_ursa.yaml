@@ -1,0 +1,73 @@
+mover:
+  name: datamover
+  batch_size: 2
+
+directories:
+  #zarr: /scratch3/NCEPDEV/nems/David.Burrows/ufs2arco/jul23_v2/ufs2arco_test.zarr_v0.9.0
+  #cache: /scratch3/NCEPDEV/nems/David.Burrows/ufs2arco/jul23_v2/ufs2arco_test_cache_v0.9.0
+  #logs: /scratch3/NCEPDEV/nems/David.Burrows/ufs2arco/jul23_v2/ufs2arco_test_logs_v0.9.0
+  zarr: ./ufs2arco_test.zarr_v0.9.0
+  cache: ./ufs2arco_test_cache_v0.9.0
+  logs: ./ufs2arco_test_logs_v0.9.0
+
+source:
+  name: gcs_era5_1degree
+  uri: "gs://weatherbench2/datasets/era5/1959-2023_01_10-wb13-6h-1440x721_with_derived_variables.zarr"
+  time:
+    start: 2018-01-01T00
+    end: 2018-01-03T18
+    freq: 6h
+
+  variables:
+    - land_sea_mask
+    - geopotential_at_surface
+    - surface_pressure
+    - 10m_u_component_of_wind
+    - 10m_v_component_of_wind
+    - 2m_temperature
+    - total_precipitation_6hr
+    - total_column_water
+    - geopotential
+    - u_component_of_wind
+    - v_component_of_wind
+    - vertical_velocity
+    - temperature
+    - specific_humidity
+
+  levels:
+    - 500
+    - 850
+transforms:
+  divide:
+    geopotential_at_surface: 9.80665
+
+  mappings:
+    round: land_sea_mask
+
+target:
+  name: anemoi
+  sort_channels_by_levels: True
+  compute_temporal_residual_statistics: True
+  rename:
+    geopotential_at_surface: orography
+    round_land_sea_mask: land_sea_mask
+
+  forcings:
+    - cos_latitude
+    - sin_latitude
+    - cos_longitude
+    - sin_longitude
+    - cos_julian_day
+    - sin_julian_day
+    - cos_local_time
+    - sin_local_time
+    - cos_solar_zenith_angle
+
+  chunks:
+    time: 1
+    variable: -1
+    ensemble: 1
+    cell: -1
+
+attrs:
+  description: "Created by ufs2arco"
