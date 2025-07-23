@@ -58,7 +58,7 @@ jobs:
         run: |
           python -V
           mkdir -p ${{ github.workspace }}/scratch3
-          ufs2arco datamover_ursa.yaml
+          ufs2arco ${{ github.workspace }}/.github/workflows/datamover_ursa.yaml
           #coverage run --rcfile=coverage.toml -m pytest --verbose --ignore=tests/integration
           #      - name: Get coverage report
           #shell: bash -l {0}
