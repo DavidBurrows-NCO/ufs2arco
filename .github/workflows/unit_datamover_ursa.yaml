@@ -51,7 +51,7 @@ jobs:
           python -m pip install -e . --no-deps --force-reinstall
           python -c "from importlib.metadata import version; print('xarray ', version('xarray'))"
           python -c "from importlib.metadata import version; print('zarr', version('zarr'))"
-          python -c "from importlib.metadata import version; print('mpi4py', version('mpi4py'))"
+          python -m pip install mpi4py
           python -c "from importlib.metadata import version; print('ufs2arco', version('ufs2arco'))"
       - name: Run Unit Tests
         shell: bash -l {0}
