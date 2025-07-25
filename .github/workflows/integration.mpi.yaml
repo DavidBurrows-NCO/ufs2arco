@@ -1,4 +1,4 @@
-name: Integration Tests
+name: Integration Tests source/target MPI
 
 on:
   push:
