@@ -1,0 +1,28 @@
+name: Validate YAML with Pydantic
+
+on:
+  push:
+    paths:
+      - 'tests/integration/gfs.base.yaml'
+      - 'validate_yaml.py'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate YAML
+        run: |
+          python validate_yaml.py validate-yaml.yaml
