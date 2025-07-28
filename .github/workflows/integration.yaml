@@ -2,8 +2,7 @@ name: Integration Tests
 
 on:
   push:
-    branches:
-      - "*"
+    branches: [ feature/int_test_mpi ]
   pull_request:
     branches:
       - "*"
