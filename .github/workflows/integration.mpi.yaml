@@ -50,10 +50,10 @@ jobs:
           python -c "from importlib.metadata import version; print('zarr', version('zarr'))"
           python -c "from importlib.metadata import version; print('ufs2arco', version('ufs2arco'))"
           python -c "from importlib.metadata import version; print('mpi4py', version('mpi4py'))"
+          module load openmpi ## for Ursa
       - name: Run Integration Tests
         shell: bash -l {0}
         run: |
-          mkdir -p tests_mpi/integration/replay/base/logs
           python -V
           coverage run --rcfile=coverage.toml -m pytest tests_mpi/integration --verbose
       - name: Get coverage report
