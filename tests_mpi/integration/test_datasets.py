@@ -88,7 +88,7 @@ def run_test(source, target):
         config["directories"]["logs"],
         #"log.serial.out",
         #self.logfile = f"{self.log_dir}/log.{self.rank:04d}.{self.size:04d}.out"
-        f"log.{self.rank:04d}.{self.size:04d}.out",
+        f"log.{rank:04d}.{size:04d}.out",
     )
     with open(logfile, "rb") as f:
         f.seek(-2, 2)  # Move to the second-to-last byte of the file
