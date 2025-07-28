@@ -53,6 +53,7 @@ jobs:
       - name: Run Integration Tests
         shell: bash -l {0}
         run: |
+          mkdir -p tests_mpi/integration/replay/base/logs
           python -V
           coverage run --rcfile=coverage.toml -m pytest tests_mpi/integration --verbose
       - name: Get coverage report
