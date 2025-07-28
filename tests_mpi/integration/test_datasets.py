@@ -84,16 +84,16 @@ def run_test(source, target):
     driver.run(overwrite=True)
 
     # read & print last line of log
-    logfile = os.path.join(
-        config["directories"]["logs"],
-        "log.serial.out",
-    )
-    with open(logfile, "rb") as f:
-        f.seek(-2, 2)  # Move to the second-to-last byte of the file
-        while f.read(1) != b"\n":  # Move backward until finding a newline
-            f.seek(-2, 1)
-        last_line = f.readline().decode()  # Read the last line
-    logger.info(last_line)
+#    logfile = os.path.join(
+#        config["directories"]["logs"],
+#        "log.serial.out",
+#    )
+#    with open(logfile, "rb") as f:
+#        f.seek(-2, 2)  # Move to the second-to-last byte of the file
+#        while f.read(1) != b"\n":  # Move backward until finding a newline
+#            f.seek(-2, 1)
+#        last_line = f.readline().decode()  # Read the last line
+#    logger.info(last_line)
 
     # now run the tests
     _test_static_vars(source, target, config["directories"]["zarr"])
