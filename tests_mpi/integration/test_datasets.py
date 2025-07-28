@@ -7,6 +7,8 @@ import numpy as np
 import xarray as xr
 import pytest
 
+from ufs2arco.mpi import MPITopology
+
 try:
     from mpi4py import MPI
     _has_mpi = True
@@ -91,24 +93,17 @@ def run_test(source, target):
     driver.run(overwrite=True)
 
     # get rank and size
-    def __init__(
-        self,
-    ) -> None:
-
-        self.comm = MPI.COMM_WORLD
-        self.rank = self.comm.Get_rank()
-        self.size = self.comm.Get_size()
-    #commmpi = MPI.COMM_WORLD
-    #rankmpi = commmpi.Get_rank()
-    #sizempi = commmpi.Get_size()
+    commmpi = MPI.COMM_WORLD
+    rankmpi = commmpi.Get_rank()
+    sizempi = commmpi.Get_size()
 
     # read & print last line of log
     logfile = os.path.join(
         config["directories"]["logs"],
         #"log.serial.out",
         #self.logfile = f"{self.log_dir}/log.{self.rank:04d}.{self.size:04d}.out"
-        #f"log.{rankmpi:04d}.{sizempi:04d}.out",
-        f"log.{self.rank:04d}.{self.size:04d}.out",
+        f"log.{rankmpi:04d}.{sizempi:04d}.out",
+        #f"log.{self.rank:04d}.{self.size:04d}.out",
     )
     with open(logfile, "rb") as f:
         f.seek(-2, 2)  # Move to the second-to-last byte of the file
