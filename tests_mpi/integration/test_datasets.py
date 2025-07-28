@@ -95,9 +95,9 @@ def run_test(source, target):
         self,
     ) -> None:
 
-    self.comm = MPI.COMM_WORLD
-    self.rank = self.comm.Get_rank()
-    self.size = self.comm.Get_size()
+        self.comm = MPI.COMM_WORLD
+        self.rank = self.comm.Get_rank()
+        self.size = self.comm.Get_size()
     #commmpi = MPI.COMM_WORLD
     #rankmpi = commmpi.Get_rank()
     #sizempi = commmpi.Get_size()
