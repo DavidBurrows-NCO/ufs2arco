@@ -1,5 +1,6 @@
 [tool.coverage.run]
 omit = [
     "tests/*.py",
+    "tests_mpi/*.py",
     "**/__init__.py",
 ]
