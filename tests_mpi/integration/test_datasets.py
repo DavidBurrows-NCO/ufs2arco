@@ -7,6 +7,13 @@ import numpy as np
 import xarray as xr
 import pytest
 
+try:
+    from mpi4py import MPI
+    _has_mpi = True
+except ImportError:
+    _has_mpi = False
+    warnings.warn(f"ufs2arco.mpi: Unable to import mpi4py, cannot use this module")
+
 from ufs2arco.driver import Driver
 from ufs2arco.log import SimpleFormatter
 
@@ -82,6 +89,11 @@ def run_test(source, target):
     # run driver
     driver = Driver(config_filename)
     driver.run(overwrite=True)
+
+    # get rank and size
+    self.comm = MPI.COMM_WORLD
+    self.rank = self.comm.Get_rank()
+    self.size = self.comm.Get_size()
 
     # read & print last line of log
     logfile = os.path.join(
