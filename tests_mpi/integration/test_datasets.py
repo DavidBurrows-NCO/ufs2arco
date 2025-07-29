@@ -16,7 +16,7 @@ except ImportError:
 
 from ufs2arco.driver import Driver
 from ufs2arco.log import SimpleFormatter
-from ufs2arco.mpi import MPITopology
+from ufs2arco.mpi import MPITopology # use class to get rank and size for log file
 
 logger = logging.getLogger("integration-test")
 _local_path = os.path.dirname(__file__)
