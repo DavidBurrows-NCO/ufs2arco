@@ -93,12 +93,12 @@ def run_test(source, target):
 
     # get rank info from mpi.MPITopology
     obj = MPITopology()
-    self = obj.__init__()
+    obj.__init__()
 
     # read & print last line of log
     logfile = os.path.join(
         config["directories"]["logs"],
-        f"log.{self.rank:04d}.{self.size:04d}.out",
+        f"log.{rank:04d}.{size:04d}.out",
     )
     with open(logfile, "rb") as f:
         f.seek(-2, 2)  # Move to the second-to-last byte of the file
