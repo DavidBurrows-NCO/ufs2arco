@@ -93,7 +93,7 @@ def run_test(source, target):
 
     # get rank info from mpi.MPITopology
     obj = MPITopology()
-    obj.__init__(self)
+    obj.__init__()
 
     # read & print last line of log
     logfile = os.path.join(
