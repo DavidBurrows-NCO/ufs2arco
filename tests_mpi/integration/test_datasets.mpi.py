@@ -16,6 +16,7 @@ except ImportError:
 
 from ufs2arco.driver import Driver
 from ufs2arco.log import SimpleFormatter
+from ufs2arco.mpi import MPITopology
 
 logger = logging.getLogger("integration-test")
 _local_path = os.path.dirname(__file__)
@@ -95,13 +96,19 @@ def run_test(source, target):
     rankmpi = commmpi.Get_rank()
     sizempi = commmpi.Get_size()
 
+    # get rank info from mpi.MPITopology
+    obj = MPITopology()
+    obj.__init__()
+    print(self.rank)
+    print(rank)
+
     # read & print last line of log
     logfile = os.path.join(
         config["directories"]["logs"],
         #"log.serial.out",
         #self.logfile = f"{self.log_dir}/log.{self.rank:04d}.{self.size:04d}.out"
-        f"log.{rankmpi:04d}.{sizempi:04d}.out",
-        #f"log.{self.rank:04d}.{self.size:04d}.out",
+        #f"log.{rankmpi:04d}.{sizempi:04d}.out",
+        f"log.{self.rank:04d}.{self.size:04d}.out",
     )
     with open(logfile, "rb") as f:
         f.seek(-2, 2)  # Move to the second-to-last byte of the file
