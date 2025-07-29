@@ -139,6 +139,7 @@ class Anemoi(Target):
         statistics_period: Optional[dict] = None,
         compute_temporal_residual_statistics: Optional[bool] = False,
         sort_channels_by_levels: Optional[bool] = False,
+        variables_with_nans: Optional[list] = None,
     ) -> None:
 
         super().__init__(
@@ -164,6 +165,8 @@ class Anemoi(Target):
                 logger.info(f"{self.name}.__init__: can't rename {key} -> {self.rename[key]}, either key or val is in a protected list. I'll drop it and forget about it.")
                 self.rename.pop(key)
 
+        self.variables_with_nans = variables_with_nans
+
 
     def get_expanded_dim_order(self, xds):
         """this is used in :meth:`map_static_to_expanded`"""
@@ -179,6 +182,8 @@ class Anemoi(Target):
             xds["valid_time"] = xds["t0"] + xds["lead_time"].compute()
             xds = xds.squeeze("fhr", drop=True)
             xds = xds.swap_dims({"t0": "valid_time"})
+            if "t0" in xds.coords:
+                xds = xds.drop_vars("t0")
 
         if not self._has_member:
             xds = xds.expand_dims({"ensemble": self.ensemble})
@@ -507,7 +512,10 @@ class Anemoi(Target):
         * temporal stats (if specified)
         """
 
-        self.add_dates(topo)
+        if topo.is_root:
+            self.add_dates()
+            self.reconcile_missing_and_nans()
+        topo.barrier()
 
         logger.info(f"Aggregating statistics")
         self.aggregate_stats(topo)
@@ -519,7 +527,7 @@ class Anemoi(Target):
             logger.info(f"Done computing temporal residual statistics\n")
 
 
-    def add_dates(self, topo) -> None:
+    def add_dates(self) -> None:
         """Deal with the dates issue
 
         for some reason, it is a challenge to get the datetime64 dtype to open
@@ -528,24 +536,97 @@ class Anemoi(Target):
         than in the create_container and incrementally fill workflow.
         """
 
-        if topo.is_root:
-            xds = xr.open_zarr(self.store_path)
-            attrs = xds.attrs.copy()
+        xds = xr.open_zarr(self.store_path)
+        attrs = xds.attrs.copy()
 
-            nds = xr.Dataset()
-            nds["dates"] = xr.DataArray(
-                self.datetime,
-                coords=xds["time"].coords,
-            )
-            nds["dates"].encoding = {
-                "dtype": "datetime64[s]",
-                "units": "seconds since 1970-01-01",
-            }
+        nds = xr.Dataset()
+        nds["dates"] = xr.DataArray(
+            self.datetime,
+            coords=xds["time"].coords,
+        )
+        nds["dates"].encoding = {
+            "dtype": "datetime64[s]",
+            "units": "seconds since 1970-01-01",
+        }
 
-            # store it, first copying the attributes over
+        # store it, first copying the attributes over
+        nds.attrs = attrs
+        nds.to_zarr(self.store_path, mode="a")
+        logger.info(f"{self.name}.add_dates: dates appended to the dataset\n")
+
+    def reconcile_missing_and_nans(self) -> None:
+        """This has to happen after :meth:`add_dates` is called.
+
+        Here we do two things:
+            1. Make sure missing_dates show up as True in the ``has_nans_array``
+               (which propagates to ``has_nans``, since :meth:`aggregate_stats: is called right after this.)
+            2. If we have NaNs that we should not have, report it as a missing date
+        """
+
+        logger.info(f"{self.name}.reconcile_missing_and_nans: Starting...")
+
+        something_happened = False
+        xds = xr.open_zarr(self.store_path)
+        xds = xds.swap_dims({"time": "dates"})
+        xds["has_nans_array"].load()
+        missing_dates = xds.attrs.get("missing_dates", [])
+        attrs = xds.attrs.copy()
+
+        nds = xr.Dataset()
+        nds["has_nans_array"] = xds["has_nans_array"]
+
+        # 1. Make sure has_nans_array is True at missing_dates
+        logger.info("Checking that has_nans_array = True at each missing_date")
+        for mdate in missing_dates:
+            this_one = xds.sel(dates=mdate)
+            is_actually_nan = np.isnan(this_one["data"]).any().values
+            has_nan = this_one["has_nans_array"].any().values
+            if is_actually_nan and not has_nan:
+                something_happened = True
+
+                logger.info(f" ... setting the date in has_nans_array to True: {mdate}")
+                nds["has_nans_array"].loc[{"dates": mdate}] = True
+
+
+        # 2. Make sure dates with unexpected NaNs get added to missing_dates
+        logger.info("Checking that missing_dates contains all instances of has_nans_array = True (as desired per variable)")
+        ignore_idx = []
+        if self.variables_with_nans is not None:
+
+            ignoreme = list()
+            for ignore_this in self.variables_with_nans:
+                if ignore_this in xds.attrs["variables"]:
+                    ignoreme.append(ignore_this)
+                else:
+                    all_instances = [entry for entry in xds.attrs["variables"] if ignore_this in entry]
+                    for entry in all_instances:
+                        ignoreme.append(entry)
+
+            logger.info(f"Will ignore the following fields if they have NaNs\n{ignoreme}")
+            ignore_idx = [xds.attrs["variables"].index(varname) for varname in ignoreme]
+
+        keep_idx = [idx for idx in xds["variable"].values if idx not in ignore_idx]
+
+        nanidx = xds["has_nans_array"].sel(variable=keep_idx).any(["variable", "ensemble"]).values
+        nandates = [str(pd.Timestamp(ndate)) for ndate in xds["dates"][nanidx].values]
+        new_missing_dates = list()
+        for ndate in nandates:
+            is_missing = ndate in missing_dates
+            if not is_missing:
+                something_happened = True
+                logger.info(f" ... adding date where has_nans_array = True to missing_dates: {ndate}")
+                new_missing_dates.append(ndate)
+
+        if len(new_missing_dates) > 0:
+            attrs["missing_dates"] = sorted(missing_dates + new_missing_dates)
+
+
+        if something_happened:
+            nds["time"] = xds["time"]
+            nds = nds.swap_dims({"dates": "time"}).drop_vars("dates")
             nds.attrs = attrs
             nds.to_zarr(self.store_path, mode="a")
-            logger.info(f"{self.name}.add_dates: dates appended to the dataset\n")
+            logger.info(f"{self.name}.reconcile_missing_and_nans: Updated zarr with missing_dates and has_nans_array")
 
 
     def aggregate_stats(self, topo) -> None:
@@ -709,9 +790,65 @@ class Anemoi(Target):
         for missing_sample in missing_data:
             if self._has_fhr:
                 valid_time = pd.Timestamp(missing_sample["t0"]) + pd.Timedelta(hours=missing_sample["fhr"])
-                missing_dates.append(str(valid_time))
+                valid_time = str(valid_time)
             else:
-                missing_dates.append(missing_sample["time"])
+                valid_time = missing_sample["time"]
+
+            # in multisource case, we could have repeats
+            if valid_time not in missing_dates:
+                missing_dates.append(valid_time)
+
 
         zds.attrs["missing_dates"] = missing_dates
         zarr.consolidate_metadata(self.store_path)
+
+
+    def merge_multisource(self, dslist: list[xr.Dataset]) -> xr.Dataset:
+        """Take a list of datasets, each from their own source, and merge them"""
+
+        attrs_list = [xds.attrs.copy() for xds in dslist]
+
+        result = xr.concat(dslist, dim="variable", combine_attrs="drop")
+
+        # these should not have a variable dimension
+        for key in ["latitudes", "longitudes"]:
+            result[key] = result[key].isel(variable=0, drop=True)
+
+        # create a new variable, to not have [0, 1, 2, 3, 0, 1] or whatever
+        result["new_variable"] = xr.DataArray(np.arange(len(result.variable)), coords=result.variable.coords)
+        result = result.swap_dims({"variable": "new_variable"}).drop_vars("variable").rename({"new_variable": "variable"})
+
+        result.attrs = _merge_attrs(attrs_list)
+
+        # Rechunk along variable, otherwise this is not worth it!
+        result = result.chunk({"variable": self.chunks["variable"]})
+
+
+        # TODO: resort variable?
+        # Or maybe it's more straightforward to leave the order as is, same as concatenating multiple datasets
+        return result
+
+
+def _merge_attrs(list_of_dicts):
+    merged_dict = {}
+    for d in list_of_dicts:
+        for key, value in d.items():
+            if key not in ["variables", "variables_metadata", "latest_write_timestamp"]:
+                if key in merged_dict and merged_dict[key] != value:
+                    raise ValueError(
+                        f"Conflict for common key '{key}': "
+                        f"Existing value '{merged_dict[key]}' "
+                        f"differs from new value '{value}'."
+                    )
+                merged_dict[key] = value
+
+    # handle these separately
+    lists_of_variables = [attrs["variables"] for attrs in list_of_dicts]
+    merged_dict["variables"] = [item for sublist in lists_of_variables for item in sublist]
+
+    vmetadata = dict()
+    for attrs in list_of_dicts:
+        vmetadata.update(attrs["variables_metadata"].copy())
+
+    merged_dict["variables_metadata"] = {key: vmetadata[key] for key in merged_dict["variables"]}
+    return merged_dict
