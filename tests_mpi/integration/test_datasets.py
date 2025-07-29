@@ -91,23 +91,13 @@ def run_test(source, target):
     driver = Driver(config_filename)
     driver.run(overwrite=True)
 
-    # get rank and size
-    commmpi = MPI.COMM_WORLD
-    rankmpi = commmpi.Get_rank()
-    sizempi = commmpi.Get_size()
-
     # get rank info from mpi.MPITopology
     obj = MPITopology()
     obj.__init__()
-    print(self.rank)
-    print(rank)
 
     # read & print last line of log
     logfile = os.path.join(
         config["directories"]["logs"],
-        #"log.serial.out",
-        #self.logfile = f"{self.log_dir}/log.{self.rank:04d}.{self.size:04d}.out"
-        #f"log.{rankmpi:04d}.{sizempi:04d}.out",
         f"log.{self.rank:04d}.{self.size:04d}.out",
     )
     with open(logfile, "rb") as f:

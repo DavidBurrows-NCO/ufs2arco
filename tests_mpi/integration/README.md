@@ -1,4 +1,4 @@
-# Integration tests
+# MPI-based Integration tests
 
 ## `test_datasets.py`
 
