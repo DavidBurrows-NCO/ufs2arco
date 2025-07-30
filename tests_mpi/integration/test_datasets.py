@@ -92,17 +92,12 @@ def run_test(source, target):
     driver.run(overwrite=True)
 
     # get rank info from mpi.MPITopology
-    mpi_class = MPITopology()
-    rank = mpi_class.rank
-    size = mpi_class.size
-    #comm = MPI.COMM_WORLD
-    #rank = comm.Get_rank()
-    #size = comm.Get_size()
+    mpitopology = MPITopology()
 
     # read & print last line of log
     logfile = os.path.join(
         config["directories"]["logs"],
-        f"log.{rank:04d}.{size:04d}.out",
+        f"log.{mpitopology.rank:04d}.{mpitopology.size:04d}.out",
     )
     with open(logfile, "rb") as f:
         f.seek(-2, 2)  # Move to the second-to-last byte of the file
