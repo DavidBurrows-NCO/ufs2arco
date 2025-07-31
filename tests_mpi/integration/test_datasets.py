@@ -101,7 +101,7 @@ def run_test(source, target):
 #        f"log.{mpitopology.rank:04d}.{mpitopology.size:04d}.out",
 #    )
    # with open(logfile, "rb") as f:
-    with open(self.logfile, "rb") as f:
+    with open(mpitopology.logfile, "rb") as f:
         f.seek(-2, 2)  # Move to the second-to-last byte of the file
         while f.read(1) != b"\n":  # Move backward until finding a newline
             f.seek(-2, 1)
